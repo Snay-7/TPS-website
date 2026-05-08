@@ -14,8 +14,8 @@ export default function Footer() {
             <p className="text-sm leading-relaxed mb-6 max-w-sm">
               Professional property sourcing, rent-to-rent solutions, and education for UK landlords and investors.
             </p>
-            <a href="mailto:contact@tps.com" className="text-sm hover:text-brand-yellow transition-colors block mb-1">
-              contact@tps.com
+            <a href="mailto:contact@thepropertysourcegroup.com" className="text-sm hover:text-brand-yellow transition-colors block mb-1">
+              contact@thepropertysourcegroup.com
             </a>
             <p className="text-sm">United Kingdom</p>
           </div>

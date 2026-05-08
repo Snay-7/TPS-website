@@ -54,10 +54,16 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs">© 2026 TPS. All rights reserved.</p>
-          <p className="text-xs">Built with care for UK property professionals.</p>
+          <p className="text-xs">© {new Date().getFullYear()} TPS. All rights reserved.</p>
+          <p className="text-xs">
+            Built by{" "}
+            
+              href="https://kleper.studio"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand-yellow hover:text-white transition-colors font-semibold"
+            >
+              Kleper.Studio
+            </a>
+          </p>
         </div>
-      </div>
-    </footer>
-  );
-}

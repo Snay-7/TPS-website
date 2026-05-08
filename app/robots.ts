@@ -5,6 +5,6 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       { userAgent: "*", allow: "/", disallow: ["/api/", "/admin/"] },
     ],
-    sitemap: "https://tps-website-one.vercel.app/sitemap.xml",
+    sitemap: "https://thepropertysourcegroup.com/sitemap.xml",
   };
 }

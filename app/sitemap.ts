@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const BASE_URL = "https://tps-website-one.vercel.app";
+const BASE_URL = "https://thepropertysourcegroup.com";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();

@@ -18,7 +18,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://tps-website-one.vercel.app"),
+  metadataBase: new URL("https://thepropertysourcegroup.com"),
   title: {
     default: "TPS | Professional Property Sourcing & Rent-to-Rent Specialists UK",
     template: "%s | TPS",
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_GB",
-    url: "https://tps-website-one.vercel.app",
+    url: "https://thepropertysourcegroup.com",
     siteName: "TPS",
     title: "TPS | Professional Property Sourcing & R2R Specialists",
     description:
@@ -79,8 +79,8 @@ export default function RootLayout({
     "@type": "Organization",
     name: "TPS",
     alternateName: "The Property Source",
-    url: "https://tps-website-one.vercel.app",
-    logo: "https://tps-website-one.vercel.app/logo.png",
+    url: "https://thepropertysourcegroup.com",
+    logo: "https://thepropertysourcegroup.com/logo.png",
     description:
       "Professional property sourcing and rent-to-rent specialists serving UK landlords and investors.",
     address: {

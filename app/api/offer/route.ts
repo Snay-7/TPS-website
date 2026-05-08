@@ -28,7 +28,8 @@ export async function POST(req: Request) {
     // Generate PDF
     let pdfBuffer: Buffer | null = null;
     try {
-      pdfBuffer = await renderToBuffer(React.createElement(OfferPDF, { data }) as React.ReactElement);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      pdfBuffer = await renderToBuffer(React.createElement(OfferPDF, { data }) as any);
     } catch (pdfErr) {
       console.error("PDF generation failed:", pdfErr);
     }
@@ -73,7 +74,7 @@ export async function POST(req: Request) {
           from: "TPS Offers <onboarding@resend.dev>",
           to: process.env.NOTIFICATION_EMAIL,
           subject: `New R2R Offer: ${data.full_name} - £${Number(data.rent_offered).toLocaleString()}/mo + £${fee.toLocaleString()} fee`,
-          html: offerSummary + (pdfBuffer ? '<p style="font-size:13px;color:#6b7785;margin-top:16px;">📎 Full offer PDF attached.</p>' : ""),
+          html: offerSummary + (pdfBuffer ? '<p style="font-size:13px;color:#6b7785;margin-top:16px;">Full offer PDF attached.</p>' : ""),
           attachments,
         });
       } catch (e) {
@@ -94,7 +95,7 @@ export async function POST(req: Request) {
               <div style="background:#fafaf7;padding:32px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;border-top:none;">
                 <h2 style="color:#0a1f3a;margin:0 0 16px;">Thank you, ${data.full_name}</h2>
                 <p style="line-height:1.6;color:#4a5568;">We have received your offer for <strong>${data.property_address}</strong>. Our team will review and respond within 2 working days.</p>
-                ${pdfBuffer ? '<p style="line-height:1.6;color:#4a5568;">📎 A full PDF copy of your offer is attached to this email for your records.</p>' : ""}
+                ${pdfBuffer ? '<p style="line-height:1.6;color:#4a5568;">A full PDF copy of your offer is attached to this email for your records.</p>' : ""}
                 <div style="background:white;padding:24px;border-radius:8px;margin:24px 0;border:1px solid #e5e7eb;">
                   ${offerSummary}
                 </div>

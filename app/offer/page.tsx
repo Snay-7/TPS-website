@@ -14,8 +14,8 @@ export default function OfferForm() {
 
     const formData = new FormData(e.currentTarget);
 
-    if (!formData.get("agree_terms") || !formData.get("agree_contact")) {
-      setError("Please confirm both declarations to submit your offer.");
+    if (!formData.get("agree_terms") || !formData.get("agree_contact") || !formData.get("agree_fee")) {
+      setError("Please confirm all declarations to submit your offer.");
       setSubmitting(false);
       return;
     }
@@ -34,6 +34,8 @@ export default function OfferForm() {
       start_date: String(formData.get("start_date") || ""),
       intended_use: String(formData.get("intended_use") || ""),
       bills_included: String(formData.get("bills_included") || ""),
+      sourcing_fee: Number(formData.get("sourcing_fee") || 0),
+      sourcing_fee_terms: String(formData.get("sourcing_fee_terms") || ""),
       comments: String(formData.get("comments") || ""),
       signature: String(formData.get("signature") || ""),
     };
@@ -123,18 +125,38 @@ export default function OfferForm() {
             </div>
           </Section>
 
-          <Section num="4" color="bg-navy" title="Additional Comments">
+          <Section num="4" color="bg-brand-yellow text-navy" title="Sourcing Fee Agreement">
+            <div className="bg-cream rounded-xl p-5 mb-6 border-l-4 border-brand-yellow">
+              <p className="font-semibold text-navy mb-2 text-sm">About sourcing fees</p>
+              <p className="text-xs text-gray-700 leading-relaxed">A sourcing fee is the fee payable to TPS for sourcing this property opportunity. This is in addition to monthly rent and is payable as agreed below.</p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4 mb-4">
+              <Input label="Sourcing Fee Offered (£) *" name="sourcing_fee" type="number" required placeholder="2500" />
+              <Select label="Fee Payment Terms *" name="sourcing_fee_terms" required options={[
+                "On exchange of contracts",
+                "On signing of lease",
+                "50% on offer acceptance, 50% on completion",
+                "Within 7 days of lease signing",
+                "Within 14 days of lease signing",
+                "Other (specify in comments)"
+              ]} />
+            </div>
+          </Section>
+
+          <Section num="5" color="bg-navy" title="Additional Comments">
             <label className="block text-sm font-semibold text-navy mb-2">Refurbishment plans, special terms, or anything else we should know</label>
             <textarea name="comments" rows={4} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-brand-blue outline-none transition-colors" placeholder="Optional. Describe any works you intend to carry out, additional terms, or supporting information." />
           </Section>
 
-          <Section num="5" color="bg-navy" title="Declaration & Signature">
+          <Section num="6" color="bg-navy" title="Declaration & Signature">
             <div className="bg-cream rounded-xl p-5 mb-6 border-l-4 border-brand-yellow">
               <p className="font-semibold text-navy mb-3 text-sm">By submitting, you confirm and agree:</p>
               <ul className="text-xs text-gray-700 space-y-2 leading-relaxed">
                 <li>The information provided is true, accurate and complete to the best of your knowledge.</li>
                 <li>This offer is submitted in good faith and is subject to contract, references, and landlord approval.</li>
                 <li>You have the legal right and financial capacity to enter into a Rent-to-Rent agreement on these terms.</li>
+                <li>The sourcing fee stated above is non-refundable once the lease is signed.</li>
                 <li>TPS reserves the right to accept, reject, or counter this offer at its sole discretion.</li>
                 <li>This offer does not constitute a binding tenancy agreement until a formal contract is signed.</li>
                 <li>You consent to TPS conducting credit, identity, and reference checks.</li>
@@ -146,6 +168,10 @@ export default function OfferForm() {
               <label className="flex items-start gap-3 p-4 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-brand-blue transition-colors">
                 <input type="checkbox" name="agree_terms" required className="mt-1 w-4 h-4 accent-navy" />
                 <span className="text-sm text-gray-700">I confirm I have read and accept the declaration above, and all information I have provided is accurate. <span className="text-red-600">*</span></span>
+              </label>
+              <label className="flex items-start gap-3 p-4 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-brand-blue transition-colors">
+                <input type="checkbox" name="agree_fee" required className="mt-1 w-4 h-4 accent-navy" />
+                <span className="text-sm text-gray-700">I agree to pay the sourcing fee stated above according to the payment terms specified. <span className="text-red-600">*</span></span>
               </label>
               <label className="flex items-start gap-3 p-4 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-brand-blue transition-colors">
                 <input type="checkbox" name="agree_contact" required className="mt-1 w-4 h-4 accent-navy" />

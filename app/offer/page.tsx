@@ -6,6 +6,7 @@ export default function OfferForm() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [feeAmount, setFeeAmount] = useState(0);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -31,11 +32,12 @@ export default function OfferForm() {
       bedrooms: Number(formData.get("bedrooms") || 0),
       rent_offered: Number(formData.get("rent_offered") || 0),
       lease_length: String(formData.get("lease_length") || ""),
+      break_clause: String(formData.get("break_clause") || ""),
       start_date: String(formData.get("start_date") || ""),
       intended_use: String(formData.get("intended_use") || ""),
       bills_included: String(formData.get("bills_included") || ""),
       sourcing_fee: Number(formData.get("sourcing_fee") || 0),
-      sourcing_fee_terms: String(formData.get("sourcing_fee_terms") || ""),
+      sourcing_fee_terms: "30% on offer acceptance, 70% on completion",
       comments: String(formData.get("comments") || ""),
       signature: String(formData.get("signature") || ""),
     };
@@ -71,6 +73,9 @@ export default function OfferForm() {
       </div>
     );
   }
+
+  const deposit = feeAmount * 0.3;
+  const completion = feeAmount * 0.7;
 
   return (
     <div className="bg-cream pt-32 pb-24 px-6 min-h-screen">
@@ -108,7 +113,8 @@ export default function OfferForm() {
           <Section num="3" color="bg-brand-green" title="Offer Terms">
             <div className="grid md:grid-cols-2 gap-4">
               <Input label="Monthly Rent Offered (£) *" name="rent_offered" type="number" required placeholder="1500" />
-              <Select label="Proposed Lease Length *" name="lease_length" required options={["3 Years", "4 Years", "5 Years", "6 Years", "7+ Years"]} />
+              <Select label="Proposed Lease Length *" name="lease_length" required options={["1 Year", "2 Years", "3 Years", "4 Years", "5 Years", "6 Years", "7+ Years"]} />
+              <Select label="Break Clause *" name="break_clause" required options={["No break clause", "6 month break clause", "12 month break clause", "18 month break clause", "24 month break clause", "Other (specify in comments)"]} />
               <Input label="Proposed Start Date *" name="start_date" type="date" required />
               <Select label="Bills Included in Rent? *" name="bills_included" required options={["No", "Yes - all included", "Partial"]} />
             </div>
@@ -127,20 +133,38 @@ export default function OfferForm() {
 
           <Section num="4" color="bg-brand-yellow text-navy" title="Sourcing Fee Agreement">
             <div className="bg-cream rounded-xl p-5 mb-6 border-l-4 border-brand-yellow">
-              <p className="font-semibold text-navy mb-2 text-sm">About sourcing fees</p>
-              <p className="text-xs text-gray-700 leading-relaxed">A sourcing fee is the fee payable to TPS for sourcing this property opportunity. This is in addition to monthly rent and is payable as agreed below.</p>
+              <p className="font-semibold text-navy mb-2 text-sm">Sourcing fee payment structure</p>
+              <p className="text-xs text-gray-700 leading-relaxed mb-3">A sourcing fee is the fee payable to TPS for sourcing this property opportunity. This is in addition to monthly rent and is paid in two stages:</p>
+              <ul className="text-xs text-gray-700 space-y-1 leading-relaxed pl-4">
+                <li><strong>30%</strong> payable once the offer is agreed</li>
+                <li><strong>70%</strong> payable on completion</li>
+              </ul>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4 mb-4">
-              <Input label="Sourcing Fee Offered (£) *" name="sourcing_fee" type="number" required placeholder="2500" />
-              <Select label="Fee Payment Terms *" name="sourcing_fee_terms" required options={[
-                "On exchange of contracts",
-                "On signing of lease",
-                "50% on offer acceptance, 50% on completion",
-                "Within 7 days of lease signing",
-                "Within 14 days of lease signing",
-                "Other (specify in comments)"
-              ]} />
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-navy mb-2">Total Sourcing Fee Offered (£) *</label>
+              <input
+                type="number"
+                name="sourcing_fee"
+                required
+                placeholder="2500"
+                onChange={(e) => setFeeAmount(Number(e.target.value) || 0)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-brand-blue outline-none transition-colors"
+              />
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="text-xs font-semibold text-navy mb-3">Payment Schedule</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-cream rounded-lg p-3">
+                  <div className="text-xs text-gray-500 mb-1">30% on offer acceptance</div>
+                  <div className="text-lg font-bold text-navy">£{deposit.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+                </div>
+                <div className="bg-cream rounded-lg p-3">
+                  <div className="text-xs text-gray-500 mb-1">70% on completion</div>
+                  <div className="text-lg font-bold text-navy">£{completion.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+                </div>
+              </div>
             </div>
           </Section>
 
@@ -156,7 +180,7 @@ export default function OfferForm() {
                 <li>The information provided is true, accurate and complete to the best of your knowledge.</li>
                 <li>This offer is submitted in good faith and is subject to contract, references, and landlord approval.</li>
                 <li>You have the legal right and financial capacity to enter into a Rent-to-Rent agreement on these terms.</li>
-                <li>The sourcing fee stated above is non-refundable once the lease is signed.</li>
+                <li>The sourcing fee is paid 30% on offer acceptance and 70% on completion. The 30% deposit is non-refundable once the offer is accepted.</li>
                 <li>TPS reserves the right to accept, reject, or counter this offer at its sole discretion.</li>
                 <li>This offer does not constitute a binding tenancy agreement until a formal contract is signed.</li>
                 <li>You consent to TPS conducting credit, identity, and reference checks.</li>
@@ -171,7 +195,7 @@ export default function OfferForm() {
               </label>
               <label className="flex items-start gap-3 p-4 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-brand-blue transition-colors">
                 <input type="checkbox" name="agree_fee" required className="mt-1 w-4 h-4 accent-navy" />
-                <span className="text-sm text-gray-700">I agree to pay the sourcing fee stated above according to the payment terms specified. <span className="text-red-600">*</span></span>
+                <span className="text-sm text-gray-700">I agree to pay 30% of the sourcing fee on offer acceptance and the remaining 70% on completion. <span className="text-red-600">*</span></span>
               </label>
               <label className="flex items-start gap-3 p-4 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-brand-blue transition-colors">
                 <input type="checkbox" name="agree_contact" required className="mt-1 w-4 h-4 accent-navy" />

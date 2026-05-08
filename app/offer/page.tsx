@@ -142,7 +142,7 @@ export default function OfferForm() {
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-semibold text-navy mb-2">Total Sourcing Fee Offered (£) *</label>
+              <label className="block text-sm font-semibold text-navy mb-2">Total Sourcing Fee Agreed (£) *</label>
               <input
                 type="number"
                 name="sourcing_fee"

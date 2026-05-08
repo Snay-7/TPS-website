@@ -31,7 +31,7 @@ export default function Home() {
 
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-extrabold leading-[1.02] mb-8 animate-fade-up">
               Professional Property
-              <span className="block gradient-text mt-2">Sourcing Services</span>
+              <span className="block gradient-text mt-2 pb-2">Sourcing Services</span>
               <span className="block text-white/90 mt-2">for the UK&apos;s sharpest investors.</span>
             </h1>
 

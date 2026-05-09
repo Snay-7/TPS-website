@@ -52,7 +52,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     checkAuth();
 
     // Listen for auth changes (logout from another tab, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string) => {
       if (event === "SIGNED_OUT") {
         if (isMounted) router.replace("/admin/login");
       }

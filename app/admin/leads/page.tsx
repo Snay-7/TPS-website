@@ -43,8 +43,18 @@ export default function LeadsPage() {
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-navy mb-1">Leads</h1>
-        <p className="text-gray-500 text-sm">{leads.length} leads — sorted by AI score</p>
+        <div className="flex items-start justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-navy mb-1">Leads</h1>
+            <p className="text-gray-500 text-sm">{leads.length} leads — sorted by AI score</p>
+          </div>
+          <Link
+            href="/admin/leads/new"
+            className="bg-navy text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-navy-dark transition-colors"
+          >
+            + Add Lead Manually
+          </Link>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6 flex flex-wrap gap-3">

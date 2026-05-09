@@ -12,9 +12,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (isLoginPage) return;
-
     const supabase = createAdminClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then((res) => {
+      const user = res.data.user;
       if (user?.email) setUserEmail(user.email);
     });
   }, [isLoginPage]);
@@ -63,7 +63,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <div className="p-4 border-t border-white/10">
           <Link href="/" className="block text-xs text-white/50 hover:text-white/80 mb-3">
-            ← Back to public site
+            Back to public site
           </Link>
           <button
             onClick={handleLogout}

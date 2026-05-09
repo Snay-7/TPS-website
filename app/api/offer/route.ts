@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAnonClient } from "@/lib/supabase/anon";
 import { Resend } from "resend";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { OfferPDF } from "@/lib/pdf/OfferPDF";
@@ -8,7 +8,7 @@ import React from "react";
 export async function POST(req: Request) {
   try {
     const data = await req.json();
-    const supabase = await createClient();
+    const supabase = createAnonClient();
 
     const { data: offer, error } = await supabase
       .from("offers")

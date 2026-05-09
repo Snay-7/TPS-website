@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAnonClient } from "@/lib/supabase/anon";
 import { Resend } from "resend";
 
 export async function POST(req: Request) {
   try {
     const data = await req.json();
-    const supabase = await createClient();
+    const supabase = createAnonClient();
 
     const { data: enquiry, error } = await supabase
       .from("landlord_enquiries")

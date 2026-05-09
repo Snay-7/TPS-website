@@ -52,16 +52,17 @@ export default function LandlordEnquiry() {
       const responseBody = await res.text();
       if (!res.ok) {
         console.error("API response:", res.status, responseBody);
-        throw new Error(`Status ${res.status}: ${responseBody}`);
+        throw new Error("Status " + res.status + ": " + responseBody);
       }
       setSuccess(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
-      setError(`Error: ${message}. Please try again or email contact@thepropertysourcegroup.com.`);
+      setError("Error: " + message + ". Please try again or email contact@thepropertysourcegroup.com.");
     } finally {
       setSubmitting(false);
     }
+  }
 
   if (success) {
     return (
@@ -87,7 +88,7 @@ export default function LandlordEnquiry() {
           <p className="text-gray-600 text-lg">Tell us about your property and we will respond within 24 hours with a no-obligation guaranteed rent offer.</p>
         </div>
 
-        {error && <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg mb-6">{error}</div>}
+        {error && <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg mb-6 break-all text-sm">{error}</div>}
 
         <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
           <FormSection num="1" color="bg-brand-blue" title="Your Details">
@@ -110,7 +111,7 @@ export default function LandlordEnquiry() {
 
           <FormSection num="3" color="bg-brand-green" title="Your Preferences">
             <div className="grid md:grid-cols-2 gap-4">
-              <Input label="Expected Monthly Rent (£)" name="monthly_rent_expected" type="number" placeholder="1500" />
+              <Input label="Expected Monthly Rent (GBP)" name="monthly_rent_expected" type="number" placeholder="1500" />
               <Select label="Preferred Strategy" name="preferred_strategy" options={["Open to suggestions", "R2HMO", "R2SA Serviced Accommodation", "Social Housing", "Supported Living", "Single Let R2R"]} />
               <Input label="Available From" name="available_from" type="date" />
             </div>
@@ -137,7 +138,7 @@ function FormSection({ num, color, title, children }: { num: string; color: stri
   return (
     <div className="p-8 border-b border-gray-100">
       <div className="flex items-center gap-3 mb-6">
-        <span className={`w-8 h-8 ${color} text-white rounded-full flex items-center justify-center text-sm font-bold`}>{num}</span>
+        <span className={"w-8 h-8 " + color + " text-white rounded-full flex items-center justify-center text-sm font-bold"}>{num}</span>
         <h2 className="text-xl font-bold text-navy">{title}</h2>
       </div>
       {children}

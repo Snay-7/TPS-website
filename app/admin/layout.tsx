@@ -12,11 +12,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (isLoginPage) return;
-    const supabase = createAdminClient();
-    supabase.auth.getUser().then((res) => {
-      const user = res.data.user;
-      if (user?.email) setUserEmail(user.email);
-    });
+    async function loadUser() {
+      const supabase = createAdminClient();
+      const result = await supabase.auth.getUser();
+      const email = result.data.user?.email;
+      if (email) setUserEmail(email);
+    }
+    loadUser();
   }, [isLoginPage]);
 
   async function handleLogout() {

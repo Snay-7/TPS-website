@@ -1,9 +1,10 @@
 "use client";
 import { createBrowserClient } from "@supabase/ssr";
 
-let cachedClient: ReturnType<typeof createBrowserClient> | null = null;
+type AdminClient = ReturnType<typeof createBrowserClient>;
+let cachedClient: AdminClient | null = null;
 
-export function createAdminClient() {
+export function createAdminClient(): AdminClient {
   if (cachedClient) return cachedClient;
   
   cachedClient = createBrowserClient(

@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Manrope } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import WhatsAppFloat from "@/components/WhatsAppFloat";
+import ConditionalChrome from "@/components/ConditionalChrome";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -99,10 +97,7 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-white text-gray-900 antialiased">
-        <Header />
-        <main>{children}</main>
-        <Footer />
-        <WhatsAppFloat />
+        <ConditionalChrome>{children}</ConditionalChrome>
       </body>
     </html>
   );

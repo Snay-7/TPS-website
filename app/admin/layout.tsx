@@ -1,68 +1,23 @@
 "use client";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const [checking, setChecking] = useState(true);
   const [userEmail, setUserEmail] = useState("");
 
   const isLoginPage = pathname === "/admin/login";
 
   useEffect(() => {
-    if (isLoginPage) {
-      setChecking(false);
-      return;
-    }
+    if (isLoginPage) return;
 
     const supabase = createAdminClient();
-    let isMounted = true;
-
-    async function checkAuth() {
-      // Get session (more reliable than getUser for initial check)
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
-        if (isMounted) router.replace("/admin/login");
-        return;
-      }
-
-      // Check if user is in admins table
-      const { data: admin } = await supabase
-        .from("admins")
-        .select("email")
-        .eq("user_id", session.user.id)
-        .single();
-
-      if (!admin) {
-        await supabase.auth.signOut();
-        if (isMounted) router.replace("/admin/login");
-        return;
-      }
-
-      if (isMounted) {
-        setUserEmail(admin.email);
-        setChecking(false);
-      }
-    }
-
-    checkAuth();
-
-    // Listen for auth changes (logout from another tab, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string) => {
-      if (event === "SIGNED_OUT") {
-        if (isMounted) router.replace("/admin/login");
-      }
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.email) setUserEmail(user.email);
     });
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, [isLoginPage, router]);
+  }, [isLoginPage]);
 
   async function handleLogout() {
     const supabase = createAdminClient();
@@ -71,14 +26,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   if (isLoginPage) return <>{children}</>;
-
-  if (checking) {
-    return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
-        <div className="text-navy">Checking access...</div>
-      </div>
-    );
-  }
 
   const navItems = [
     { href: "/admin/dashboard", label: "Dashboard", icon: "📊" },
@@ -93,7 +40,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="bg-white text-navy px-3 py-1 rounded-lg font-bold text-lg">TPS</div>
             <span className="text-xs text-white/60 uppercase tracking-wider">Admin</span>
           </div>
-          <p className="text-xs text-white/50 mt-2 truncate">{userEmail}</p>
+          <p className="text-xs text-white/50 mt-2 truncate">{userEmail || "Loading..."}</p>
         </div>
 
         <nav className="flex-1 p-4 space-y-1">

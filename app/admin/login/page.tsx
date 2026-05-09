@@ -1,10 +1,8 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 
 export default function AdminLogin() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,8 +25,8 @@ export default function AdminLogin() {
       return;
     }
 
-    router.push("/admin/dashboard");
-    router.refresh();
+    // Hard navigation - middleware will check admin status and redirect
+    window.location.href = "/admin/dashboard";
   }
 
   return (
@@ -76,7 +74,7 @@ export default function AdminLogin() {
             disabled={loading}
             className="w-full bg-navy text-white py-3 rounded-lg font-bold hover:bg-navy-dark disabled:opacity-50 transition-colors"
           >
-            {loading ? "Logging in..." : "Sign In"}
+            {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
 

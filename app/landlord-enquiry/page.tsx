@@ -49,15 +49,19 @@ export default function LandlordEnquiry() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("Submission failed");
+      const responseBody = await res.text();
+      if (!res.ok) {
+        console.error("API response:", res.status, responseBody);
+        throw new Error(`Status ${res.status}: ${responseBody}`);
+      }
       setSuccess(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch {
-      setError("Something went wrong. Please try again or email contact@thepropertysourcegroup.com.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setError(`Error: ${message}. Please try again or email contact@thepropertysourcegroup.com.`);
     } finally {
       setSubmitting(false);
     }
-  }
 
   if (success) {
     return (

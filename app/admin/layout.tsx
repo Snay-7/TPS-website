@@ -19,37 +19,55 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
 
     const supabase = createAdminClient();
+    let isMounted = true;
 
     async function checkAuth() {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Get session (more reliable than getUser for initial check)
+      const { data: { session } } = await supabase.auth.getSession();
 
-      if (!user) {
-        router.push("/admin/login");
+      if (!session) {
+        if (isMounted) router.replace("/admin/login");
         return;
       }
 
+      // Check if user is in admins table
       const { data: admin } = await supabase
         .from("admins")
-        .select("email, role")
-        .eq("user_id", user.id)
+        .select("email")
+        .eq("user_id", session.user.id)
         .single();
 
       if (!admin) {
-        router.push("/admin/login");
+        await supabase.auth.signOut();
+        if (isMounted) router.replace("/admin/login");
         return;
       }
 
-      setUserEmail(admin.email);
-      setChecking(false);
+      if (isMounted) {
+        setUserEmail(admin.email);
+        setChecking(false);
+      }
     }
 
     checkAuth();
+
+    // Listen for auth changes (logout from another tab, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        if (isMounted) router.replace("/admin/login");
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [isLoginPage, router]);
 
   async function handleLogout() {
     const supabase = createAdminClient();
     await supabase.auth.signOut();
-    router.push("/admin/login");
+    window.location.href = "/admin/login";
   }
 
   if (isLoginPage) return <>{children}</>;
@@ -69,7 +87,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-cream flex">
-      {/* Sidebar */}
       <aside className="w-64 bg-navy text-white flex flex-col">
         <div className="p-6 border-b border-white/10">
           <div className="flex items-center gap-2 mb-1">
@@ -98,10 +115,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </nav>
 
         <div className="p-4 border-t border-white/10">
-          <Link
-            href="/"
-            className="block text-xs text-white/50 hover:text-white/80 mb-3"
-          >
+          <Link href="/" className="block text-xs text-white/50 hover:text-white/80 mb-3">
             ← Back to public site
           </Link>
           <button
@@ -113,10 +127,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
+      <main className="flex-1 overflow-auto">{children}</main>
     </div>
   );
 }

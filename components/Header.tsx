@@ -1,9 +1,11 @@
 "use client";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import Logo from "./Logo";
 
 export default function Header() {
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -21,16 +23,20 @@ export default function Header() {
     { href: "/about", label: "About" },
   ];
 
+  // Only the homepage has a navy hero where the header should be transparent/light over dark
+  const hasDarkHero = pathname === "/";
+  const isLightMode = !hasDarkHero || scrolled;
+
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? "bg-white/90 backdrop-blur-md shadow-sm" : "bg-transparent"
+        isLightMode ? "bg-white/90 backdrop-blur-md shadow-sm" : "bg-transparent"
       }`}
     >
       <nav className="container mx-auto px-6 max-w-7xl flex items-center justify-between py-4">
         <Link href="/" className="flex items-center gap-3 group">
-          <Logo className={`w-10 h-10 ${scrolled ? "text-navy" : "text-white"} transition-colors`} />
-          <div className={`font-display font-bold text-xl tracking-tight ${scrolled ? "text-navy" : "text-white"} transition-colors`}>
+          <Logo className={`w-10 h-10 ${isLightMode ? "text-navy" : "text-white"} transition-colors`} />
+          <div className={`font-display font-bold text-xl tracking-tight ${isLightMode ? "text-navy" : "text-white"} transition-colors`}>
             TPS
           </div>
         </Link>
@@ -41,7 +47,7 @@ export default function Header() {
               key={l.href}
               href={l.href}
               className={`text-sm font-medium transition-colors ${
-                scrolled ? "text-gray-700 hover:text-navy" : "text-white/80 hover:text-white"
+                isLightMode ? "text-gray-700 hover:text-navy" : "text-white/80 hover:text-white"
               }`}
             >
               {l.label}
@@ -56,7 +62,7 @@ export default function Header() {
         </div>
 
         <button
-          className={`lg:hidden ${scrolled ? "text-navy" : "text-white"}`}
+          className={`lg:hidden ${isLightMode ? "text-navy" : "text-white"}`}
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label="Menu"
         >

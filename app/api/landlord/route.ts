@@ -22,7 +22,7 @@ export async function POST(req: Request) {
       try {
         const resend = new Resend(process.env.RESEND_API_KEY);
         await resend.emails.send({
-          from: "TPS Website <onboarding@resend.dev>",
+          from: "TPS Website <noreply@thepropertysourcegroup.com>",
           to: process.env.NOTIFICATION_EMAIL,
           subject: `New Landlord Enquiry: ${data.property_postcode}`,
           html: `

@@ -71,7 +71,7 @@ export async function POST(req: Request) {
 
       try {
         await resend.emails.send({
-          from: "TPS Offers <onboarding@resend.dev>",
+          from: "TPS Offers <noreply@thepropertysourcegroup.com>",
           to: process.env.NOTIFICATION_EMAIL,
           subject: `New R2R Offer: ${data.full_name} - £${Number(data.rent_offered).toLocaleString()}/mo + £${fee.toLocaleString()} fee`,
           html: offerSummary + (pdfBuffer ? '<p style="font-size:13px;color:#6b7785;margin-top:16px;">Full offer PDF attached.</p>' : ""),
@@ -83,7 +83,7 @@ export async function POST(req: Request) {
 
       try {
         await resend.emails.send({
-          from: "TPS <onboarding@resend.dev>",
+          from: "TPS <noreply@thepropertysourcegroup.com>",
           to: data.email,
           subject: "Your R2R Offer to TPS - Confirmation",
           html: `

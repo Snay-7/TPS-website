@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Manrope } from "next/font/google";
 import "./globals.css";
 import ConditionalChrome from "@/components/ConditionalChrome";
+import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -98,6 +99,7 @@ export default function RootLayout({
       </head>
       <body className="bg-white text-gray-900 antialiased">
         <ConditionalChrome>{children}</ConditionalChrome>
+        <Analytics />
       </body>
     </html>
   );

@@ -36,6 +36,8 @@ const BLOCKED_AGENCIES = [
   "dexters",
   "marsh & parsons",
   "marsh and parsons",
+  "black katz",
+  "hunters",
 ];
 
 // DOWNRANK - sometimes flexible, mark as cold
@@ -43,6 +45,8 @@ const DOWNRANK_AGENCIES = [
   "winkworth",
   "marsh & parsons",
   "marsh and parsons",
+  "black katz",
+  "hunters",
   "greene & co",
   "greene and co",
   "anscombe & ringland",

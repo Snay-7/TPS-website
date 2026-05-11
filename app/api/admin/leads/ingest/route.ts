@@ -33,6 +33,9 @@ const BLOCKED_AGENCIES = [
   "douglas and gordon",
   "kfh",
   "kinleigh folkard",
+  "dexters",
+  "marsh & parsons",
+  "marsh and parsons",
 ];
 
 // DOWNRANK - sometimes flexible, mark as cold

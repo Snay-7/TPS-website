@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { waitUntil } from "@vercel/functions";
 
 export const maxDuration = 60;
 
@@ -14,6 +13,42 @@ const BLOCKED_KEYWORDS = [
   "long term only", "long-term only",
   "ast only", "ast tenancy only",
   "no business use", "company let restricted",
+];
+
+// HARD REJECT - never engage, corporate policy blocks R2R
+const BLOCKED_AGENCIES = [
+  "foxtons",
+  "savills",
+  "knight frank",
+  "knightfrank",
+  "hamptons",
+  "strutt & parker",
+  "strutt and parker",
+  "chestertons",
+  "john d wood",
+  "john d. wood",
+  "jll",
+  "cluttons",
+  "douglas & gordon",
+  "douglas and gordon",
+  "kfh",
+  "kinleigh folkard",
+];
+
+// DOWNRANK - sometimes flexible, mark as cold
+const DOWNRANK_AGENCIES = [
+  "winkworth",
+  "marsh & parsons",
+  "marsh and parsons",
+  "greene & co",
+  "greene and co",
+  "anscombe & ringland",
+  "anscombe and ringland",
+  "benham & reeves",
+  "benham and reeves",
+  "dexters",
+  "ludlow thompson",
+  "kinleigh folkard hayward",
 ];
 
 const OUTCODE_TO_BOROUGH: Record<string, string> = {
@@ -45,74 +80,81 @@ type ApifyProperty = {
 function parseRent(priceStr?: string): number | null {
   if (!priceStr) return null;
   const match = priceStr.match(/£([\d,]+)/);
-  if (!match) return null;
-  return parseInt(match[1].replace(/,/g, ""), 10);
+  return match ? parseInt(match[1].replace(/,/g, ""), 10) : null;
 }
 
 function hasBlockedKeyword(property: ApifyProperty): boolean {
-  const text = [
-    property.description || "",
-    property.title || "",
-    ...(property.features || []),
-  ].join(" ").toLowerCase();
+  const text = [property.description || "", property.title || "", ...(property.features || [])].join(" ").toLowerCase();
   return BLOCKED_KEYWORDS.some((kw) => text.includes(kw));
+}
+
+function isBlockedAgency(agent?: string): boolean {
+  if (!agent) return false;
+  const agentLower = agent.toLowerCase();
+  return BLOCKED_AGENCIES.some((blocked) => agentLower.includes(blocked));
+}
+
+function isDownrankAgency(agent?: string): boolean {
+  if (!agent) return false;
+  const agentLower = agent.toLowerCase();
+  return DOWNRANK_AGENCIES.some((dr) => agentLower.includes(dr));
+}
+
+function isDirectLandlord(agent?: string): boolean {
+  if (!agent) return false;
+  const agentLower = agent.toLowerCase();
+  return agentLower.includes("openrent") || agentLower.includes("private landlord") || agentLower.includes("direct from landlord");
 }
 
 function calculateDaysOnMarket(firstVisibleDate?: string): number | null {
   if (!firstVisibleDate) return null;
-  const first = new Date(firstVisibleDate);
-  const diffMs = Date.now() - first.getTime();
-  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  return Math.floor((Date.now() - new Date(firstVisibleDate).getTime()) / 86400000);
 }
 
 async function processBatch(properties: ApifyProperty[]) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
-  let saved = 0;
-  let rejected = 0;
-  let duplicates = 0;
+  let saved = 0, rejectedConcierge = 0, rejectedAgency = 0, duplicates = 0;
   const errors: string[] = [];
 
   for (const prop of properties) {
     try {
       if (!prop.url) continue;
-      if (hasBlockedKeyword(prop)) { rejected++; continue; }
+      if (hasBlockedKeyword(prop)) { rejectedConcierge++; continue; }
+      if (isBlockedAgency(prop.agent)) { rejectedAgency++; continue; }
 
-      const { data: existing } = await supabase
-        .from("leads_properties")
-        .select("id")
-        .eq("source_url", prop.url)
-        .maybeSingle();
-
+      const { data: existing } = await supabase.from("leads_properties").select("id").eq("source_url", prop.url).maybeSingle();
       if (existing) { duplicates++; continue; }
 
       const outcode = prop.outcode || "";
-      const { data: insertedProp, error: insertError } = await supabase
-        .from("leads_properties")
-        .insert({
-          source: "rightmove",
-          source_url: prop.url,
-          property_address: prop.displayAddress || prop.title || null,
-          postcode: outcode + (prop.incode ? " " + prop.incode : ""),
-          borough: OUTCODE_TO_BOROUGH[outcode] || null,
-          bedrooms: prop.bedrooms || null,
-          property_type: prop.propertyType || null,
-          listed_rent: parseRent(prop.price),
-          days_on_market: calculateDaysOnMarket(prop.firstVisibleDate),
-          is_reduced: prop.listingUpdateReason === "price_reduced",
-          vacant_signal: false,
-          raw_data: prop as never,
-          status: "new",
-        })
-        .select()
-        .single();
+      const { data: insertedProp, error: insertError } = await supabase.from("leads_properties").insert({
+        source: "rightmove",
+        source_url: prop.url,
+        property_address: prop.displayAddress || prop.title || null,
+        postcode: outcode + (prop.incode ? " " + prop.incode : ""),
+        borough: OUTCODE_TO_BOROUGH[outcode] || null,
+        bedrooms: prop.bedrooms || null,
+        property_type: prop.propertyType || null,
+        listed_rent: parseRent(prop.price),
+        days_on_market: calculateDaysOnMarket(prop.firstVisibleDate),
+        is_reduced: prop.listingUpdateReason === "price_reduced",
+        vacant_signal: false,
+        raw_data: prop as never,
+        status: "new",
+      }).select().single();
 
-      if (insertError || !insertedProp) {
-        errors.push("Insert: " + (insertError?.message || "?"));
-        continue;
+      if (insertError || !insertedProp) { errors.push("Insert: " + (insertError?.message || "?")); continue; }
+
+      // Determine lead temperature based on agency type + signals
+      let leadTemp = "cold";
+      if (isDirectLandlord(prop.agent)) {
+        leadTemp = "hot";
+      } else if (isDownrankAgency(prop.agent)) {
+        leadTemp = "cold";
+      } else if (prop.listingUpdateReason === "price_reduced") {
+        leadTemp = "warm";
+      } else {
+        leadTemp = "warm";
       }
 
       if (prop.agent || prop.agentPhone) {
@@ -123,75 +165,57 @@ async function processBatch(properties: ApifyProperty[]) {
           is_company: true,
           company_name: prop.agent || null,
           source: "rightmove",
-          lead_temp: prop.listingUpdateReason === "price_reduced" ? "warm" : "cold",
+          lead_temp: leadTemp,
         });
       }
 
       saved++;
     } catch (err) {
-      errors.push("Property: " + (err as Error).message);
+      errors.push("Prop: " + (err as Error).message);
     }
   }
 
-  console.log(`Background processing done: saved=${saved}, rejected=${rejected}, duplicates=${duplicates}, errors=${errors.length}`);
-  return { saved, rejected, duplicates, errors };
+  console.log(`Batch done: saved=${saved}, concierge=${rejectedConcierge}, agency=${rejectedAgency}, duplicates=${duplicates}, errors=${errors.length}`);
+  return { saved, rejectedConcierge, rejectedAgency, duplicates, errors };
 }
 
 export async function POST(req: NextRequest) {
   try {
     const providedSecret = req.headers.get("x-apify-secret");
-    const expectedSecret = process.env.APIFY_WEBHOOK_SECRET;
-
-    if (!expectedSecret || providedSecret !== expectedSecret) {
+    if (!process.env.APIFY_WEBHOOK_SECRET || providedSecret !== process.env.APIFY_WEBHOOK_SECRET) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
     let properties: ApifyProperty[] = [];
 
-    if (Array.isArray(body)) {
-      properties = body;
-    } else if (Array.isArray(body.items)) {
-      properties = body.items;
-    } else if (body.resource?.defaultDatasetId) {
-      const datasetId = body.resource.defaultDatasetId;
+    if (Array.isArray(body)) properties = body;
+    else if (Array.isArray(body.items)) properties = body.items;
+    else if (body.resource?.defaultDatasetId) {
       const apifyToken = process.env.APIFY_API_TOKEN;
-      if (!apifyToken) {
-        return NextResponse.json({ error: "APIFY_API_TOKEN missing" }, { status: 500 });
-      }
-      const fetchRes = await fetch(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${apifyToken}&format=json`);
-      if (!fetchRes.ok) {
-        return NextResponse.json({ error: "Apify fetch failed: " + fetchRes.status }, { status: 500 });
-      }
+      if (!apifyToken) return NextResponse.json({ error: "APIFY_API_TOKEN missing" }, { status: 500 });
+      const fetchRes = await fetch(`https://api.apify.com/v2/datasets/${body.resource.defaultDatasetId}/items?token=${apifyToken}&format=json`);
+      if (!fetchRes.ok) return NextResponse.json({ error: "Apify fetch failed: " + fetchRes.status }, { status: 500 });
       properties = await fetchRes.json();
     }
 
-    if (properties.length === 0) {
-      return NextResponse.json({ message: "No properties received", saved: 0 });
-    }
+    if (properties.length === 0) return NextResponse.json({ message: "No properties", saved: 0 });
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return NextResponse.json({ error: "SUPABASE_SERVICE_ROLE_KEY missing" }, { status: 500 });
 
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      return NextResponse.json({ error: "SUPABASE_SERVICE_ROLE_KEY missing" }, { status: 500 });
-    }
-
-    // For small batches (test curls), process synchronously
+    // Small batch (test curl): sync return
     if (properties.length <= 5) {
       const result = await processBatch(properties);
-      return NextResponse.json({
-        message: "Ingest complete",
-        received: properties.length,
-        ...result,
-      });
+      return NextResponse.json({ message: "Ingest complete", received: properties.length, ...result });
     }
 
-    // For large batches (Apify webhook), use waitUntil to keep function alive
-    // while we return 200 immediately so Apify sees success
+    // Large batch (Apify webhook): waitUntil pattern
+    const { waitUntil } = await import("@vercel/functions");
     waitUntil(processBatch(properties));
 
     return NextResponse.json({
       message: "Ingest accepted",
       received: properties.length,
-      note: "Processing in background using waitUntil. Properties will appear in 1-2 minutes.",
+      note: "Processing in background. Properties will appear in 1-2 minutes.",
     });
 
   } catch (err) {
@@ -200,5 +224,5 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
-  return NextResponse.json({ status: "TPS Lead Ingest endpoint is live" });
+  return NextResponse.json({ status: "TPS Lead Ingest endpoint is live - with agency filter" });
 }

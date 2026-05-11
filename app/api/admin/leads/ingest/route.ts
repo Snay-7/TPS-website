@@ -64,117 +64,164 @@ function calculateDaysOnMarket(firstVisibleDate?: string): number | null {
   return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
 
-async function processProperties(properties: ApifyProperty[], expectedSecret: string, requestUrl: string) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  for (const prop of properties) {
-    try {
-      if (!prop.url) continue;
-      if (hasBlockedKeyword(prop)) continue;
-
-      const { data: existing } = await supabase
-        .from("leads_properties")
-        .select("id")
-        .eq("source_url", prop.url)
-        .maybeSingle();
-      if (existing) continue;
-
-      const outcode = prop.outcode || "";
-      const { data: insertedProp } = await supabase
-        .from("leads_properties")
-        .insert({
-          source: "rightmove",
-          source_url: prop.url,
-          property_address: prop.displayAddress || prop.title || null,
-          postcode: outcode + (prop.incode ? " " + prop.incode : ""),
-          borough: OUTCODE_TO_BOROUGH[outcode] || null,
-          bedrooms: prop.bedrooms || null,
-          property_type: prop.propertyType || null,
-          listed_rent: parseRent(prop.price),
-          days_on_market: calculateDaysOnMarket(prop.firstVisibleDate),
-          is_reduced: prop.listingUpdateReason === "price_reduced",
-          vacant_signal: false,
-          raw_data: prop as never,
-          status: "new",
-        })
-        .select()
-        .single();
-
-      if (!insertedProp) continue;
-
-      if (prop.agent || prop.agentPhone) {
-        await supabase.from("leads_landlords").insert({
-          property_id: insertedProp.id,
-          full_name: prop.agent || null,
-          phone: prop.agentPhone || null,
-          is_company: true,
-          company_name: prop.agent || null,
-          source: "rightmove",
-          lead_temp: prop.listingUpdateReason === "price_reduced" ? "warm" : "cold",
-        });
-      }
-
-      const scoringUrl = new URL("/api/admin/leads/score", requestUrl).toString();
-      fetch(scoringUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-apify-secret": expectedSecret },
-        body: JSON.stringify({ leadId: insertedProp.id }),
-      }).catch(() => {});
-
-    } catch (err) {
-      console.error("Property processing error:", err);
-    }
-  }
-}
-
 export async function POST(req: NextRequest) {
+  console.log("=== INGEST START ===");
+  
   try {
     const providedSecret = req.headers.get("x-apify-secret");
     const expectedSecret = process.env.APIFY_WEBHOOK_SECRET;
 
     if (!expectedSecret || providedSecret !== expectedSecret) {
+      console.error("Auth failed");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
     let properties: ApifyProperty[] = [];
 
+    console.log("Body keys:", Object.keys(body));
+
     if (Array.isArray(body)) {
       properties = body;
+      console.log("Body is array, count:", properties.length);
     } else if (Array.isArray(body.items)) {
       properties = body.items;
+      console.log("Body.items array, count:", properties.length);
     } else if (body.resource?.defaultDatasetId) {
       const datasetId = body.resource.defaultDatasetId;
+      console.log("Apify dataset ID:", datasetId);
+      
       const apifyToken = process.env.APIFY_API_TOKEN;
       if (!apifyToken) {
+        console.error("APIFY_API_TOKEN missing");
         return NextResponse.json({ error: "APIFY_API_TOKEN not configured" }, { status: 500 });
       }
-      const fetchRes = await fetch(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${apifyToken}&format=json`);
-      if (fetchRes.ok) {
-        properties = await fetchRes.json();
+      
+      const fetchUrl = `https://api.apify.com/v2/datasets/${datasetId}/items?token=${apifyToken}&format=json`;
+      const fetchRes = await fetch(fetchUrl);
+      
+      if (!fetchRes.ok) {
+        const errText = await fetchRes.text();
+        console.error("Apify fetch failed:", fetchRes.status, errText);
+        return NextResponse.json({ error: "Apify fetch failed: " + fetchRes.status }, { status: 500 });
       }
+      
+      properties = await fetchRes.json();
+      console.log("Fetched from Apify, count:", properties.length);
     }
 
     if (properties.length === 0) {
+      console.log("No properties to process");
       return NextResponse.json({ message: "No properties received", processed: 0 });
     }
 
-    const requestUrl = req.url;
-    processProperties(properties, expectedSecret, requestUrl).catch((err) => {
-      console.error("Background processing error:", err);
-    });
+    // Check env vars
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error("SUPABASE_SERVICE_ROLE_KEY missing");
+      return NextResponse.json({ error: "SUPABASE_SERVICE_ROLE_KEY missing" }, { status: 500 });
+    }
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    let saved = 0;
+    let rejected = 0;
+    let duplicates = 0;
+    const insertedIds: string[] = [];
+    const errors: string[] = [];
+
+    // Process up to 50 properties synchronously (stays within 60s timeout)
+    const batchSize = Math.min(properties.length, 50);
+    
+    for (let i = 0; i < batchSize; i++) {
+      const prop = properties[i];
+      try {
+        if (!prop.url) {
+          continue;
+        }
+
+        if (hasBlockedKeyword(prop)) {
+          rejected++;
+          continue;
+        }
+
+        const { data: existing } = await supabase
+          .from("leads_properties")
+          .select("id")
+          .eq("source_url", prop.url)
+          .maybeSingle();
+
+        if (existing) {
+          duplicates++;
+          continue;
+        }
+
+        const outcode = prop.outcode || "";
+        const { data: insertedProp, error: insertError } = await supabase
+          .from("leads_properties")
+          .insert({
+            source: "rightmove",
+            source_url: prop.url,
+            property_address: prop.displayAddress || prop.title || null,
+            postcode: outcode + (prop.incode ? " " + prop.incode : ""),
+            borough: OUTCODE_TO_BOROUGH[outcode] || null,
+            bedrooms: prop.bedrooms || null,
+            property_type: prop.propertyType || null,
+            listed_rent: parseRent(prop.price),
+            days_on_market: calculateDaysOnMarket(prop.firstVisibleDate),
+            is_reduced: prop.listingUpdateReason === "price_reduced",
+            vacant_signal: false,
+            raw_data: prop as never,
+            status: "new",
+          })
+          .select()
+          .single();
+
+        if (insertError || !insertedProp) {
+          errors.push(`Insert failed: ${insertError?.message || "unknown"}`);
+          console.error("Insert error:", insertError);
+          continue;
+        }
+
+        if (prop.agent || prop.agentPhone) {
+          await supabase.from("leads_landlords").insert({
+            property_id: insertedProp.id,
+            full_name: prop.agent || null,
+            phone: prop.agentPhone || null,
+            is_company: true,
+            company_name: prop.agent || null,
+            source: "rightmove",
+            lead_temp: prop.listingUpdateReason === "price_reduced" ? "warm" : "cold",
+          });
+        }
+
+        saved++;
+        insertedIds.push(insertedProp.id);
+
+      } catch (err) {
+        errors.push("Property error: " + (err as Error).message);
+        console.error("Property processing error:", err);
+      }
+    }
+
+    console.log(`=== INGEST DONE: saved=${saved}, rejected=${rejected}, duplicates=${duplicates} ===`);
 
     return NextResponse.json({
-      message: "Ingest started",
+      message: "Ingest complete",
       received: properties.length,
-      note: "Processing in background. Check /admin/leads in 1-2 minutes.",
+      processed: batchSize,
+      saved,
+      rejected_concierge: rejected,
+      duplicates,
+      inserted_ids: insertedIds.slice(0, 5),
+      errors: errors.length > 0 ? errors.slice(0, 5) : undefined,
+      note: properties.length > batchSize ? `${properties.length - batchSize} properties not processed (batch limit). Run again to process more.` : undefined,
     });
 
   } catch (err) {
-    console.error("Ingest error:", err);
+    console.error("Ingest fatal error:", err);
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }
 }
